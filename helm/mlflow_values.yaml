@@ -1,0 +1,18 @@
+backendStore:
+  databaseMigration: true
+  postgres:
+    enabled: true
+    host: "mlflow-postgres-ha.mlflow.svc.cluster.local"
+    port: 5432
+    database: "mlflow"
+    user: "mlflowuser"
+
+artifactRoot:
+  s3:
+    enabled: true
+    bucket: mlflow
+    serviceMonitor:
+      enabled: true
+
+extraEnvVars:
+  MLFLOW_S3_ENDPOINT_URL: "https://minio-s3-minio.apps.cluster-tbrlq.tbrlq.sandbox2684.opentlc.com"
