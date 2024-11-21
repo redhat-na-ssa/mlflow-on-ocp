@@ -8,6 +8,7 @@ AWSSECRETACCESSKEY=$(oc get secret -n minio aws-connection-my-storage -o json | 
 helm repo add community-charts https://community-charts.github.io/helm-charts
 helm repo update
 
+helm uninstall -n mlflow mlflow
 helm install -n mlflow mlflow -f helm/mlflow_values.yaml \
  --set artifactRoot.s3.awsAccessKeyId=$AWSACCESSKEYID \
  --set artifactRoot.s3.awsSecretAccessKey=$AWSSECRETACCESSKEY \
