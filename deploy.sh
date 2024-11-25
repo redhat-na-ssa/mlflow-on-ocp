@@ -1,6 +1,15 @@
 oc apply -f manifests
 
 PASSWORD=$(oc get secret -n mlflow mlflow-postgres-pguser-mlflowuser -o json | jq -r .data.password | tr -d '\n' | tr -d '\r\n' | base64 -d)
+
+# Passwords with forward slash give this Helm chart problems, so we cycle Crunchy until we get a valid password.
+while [[ $PASSWORD == *"/"* ]]
+do
+  oc delete -f manifests/crunch.yaml
+  oc apply -f manifests/crunch.yaml
+  PASSWORD=$(oc get secret -n mlflow mlflow-postgres-pguser-mlflowuser -o json | jq -r .data.password | tr -d '\n' | tr -d '\r\n' | base64 -d)
+done
+
 AWSACCESSKEYID=$(oc get secret -n minio aws-connection-my-storage -o json | jq -r .data.AWS_ACCESS_KEY_ID | tr -d '\n' | tr -d '\r\n' | base64 -d)
 AWSSECRETACCESSKEY=$(oc get secret -n minio aws-connection-my-storage -o json | jq -r .data.AWS_SECRET_ACCESS_KEY | tr -d '\n' | tr -d '\r\n' | base64 -d)
 
@@ -10,7 +19,7 @@ helm repo update
 
 helm uninstall -n mlflow mlflow
 helm install -n mlflow mlflow -f helm/mlflow_values.yaml \
- --set artifactRoot.s3.awsAccessKeyId=$AWSACCESSKEYID \
- --set artifactRoot.s3.awsSecretAccessKey=$AWSSECRETACCESSKEY \
- --set backendStore.postgres.password=$PASSWORD \
+ --set artifactRoot.s3.awsAccessKeyId="$AWSACCESSKEYID" \
+ --set artifactRoot.s3.awsSecretAccessKey="$AWSSECRETACCESSKEY" \
+ --set backendStore.postgres.password="$PASSWORD" \
   community-charts/mlflow
