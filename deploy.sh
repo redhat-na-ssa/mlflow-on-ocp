@@ -3,7 +3,7 @@ oc apply -f manifests
 PASSWORD=$(oc get secret -n mlflow mlflow-postgres-pguser-mlflowuser -o json | jq -r .data.password | tr -d '\n' | tr -d '\r\n' | base64 -d)
 
 # Passwords with forward slash give this Helm chart problems, so we cycle Crunchy until we get a valid password.
-while [[ $PASSWORD == *"/"* ]]
+while [[ $PASSWORD == *"/"* || $PASSWORD == *","* ]]
 do
   oc delete -f manifests/crunch.yaml
   oc apply -f manifests/crunch.yaml
