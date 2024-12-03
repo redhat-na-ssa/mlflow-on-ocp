@@ -1,3 +1,7 @@
+#!/bin/bash
+
+oc apply -f manifests/namespaces.yaml
+sleep 2
 oc apply -f manifests
 
 PASSWORD=$(oc get secret -n mlflow mlflow-postgres-pguser-mlflowuser -o json | jq -r .data.password | tr -d '\n' | tr -d '\r\n' | base64 -d)
