@@ -3,6 +3,7 @@
 oc apply -f manifests/namespaces.yaml
 sleep 2
 oc apply -f manifests
+sleep 2
 
 PASSWORD=$(oc get secret -n mlflow mlflow-postgres-pguser-mlflowuser -o json | jq -r .data.password | tr -d '\n' | tr -d '\r\n' | base64 -d)
 
@@ -11,6 +12,7 @@ while [[ $PASSWORD == *"/"* || $PASSWORD == *","* ]]
 do
   oc delete -f manifests/crunch.yaml
   oc apply -f manifests/crunch.yaml
+  sleep 1
   PASSWORD=$(oc get secret -n mlflow mlflow-postgres-pguser-mlflowuser -o json | jq -r .data.password | tr -d '\n' | tr -d '\r\n' | base64 -d)
 done
 
