@@ -11,8 +11,6 @@ artifactRoot:
   s3:
     enabled: true
     bucket: mlflow
-    serviceMonitor:
-      enabled: true
 
 extraEnvVars:
   MLFLOW_S3_ENDPOINT_URL: "https://minio-s3-minio.apps.cluster-tbrlq.tbrlq.sandbox2684.opentlc.com"
