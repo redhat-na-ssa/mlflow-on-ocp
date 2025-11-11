@@ -1,0 +1,133 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mlflow-cmap
+  namespace: mlflow
+data:
+  init.sql: |
+    CREATE SCHEMA mlflow AUTHORIZATION mlflowuser;
+    ALTER DATABASE mlflow OWNER TO mlflowuser;
+    GRANT ALL PRIVILEGES ON DATABASE mlflow TO mlflowuser;
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    app: postgresql-data
+    app.kubernetes.io/component: postgresql-data
+    app.kubernetes.io/instance: postgresql-data
+    app.kubernetes.io/name: postgresql-data
+    app.kubernetes.io/part-of: postgresql-data
+    component: postgresql-data
+  name: postgresql-data
+  namespace: mlflow
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgresql
+  namespace: mlflow
+spec:
+  ports:
+    - name: postgresql
+      nodePort: 0
+      port: 5432
+      protocol: TCP
+      targetPort: 5432
+  selector:
+    name: postgresql
+  sessionAffinity: None
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgresql
+  namespace: mlflow
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: postgresql
+  template:
+    metadata:
+      labels:
+        name: postgresql
+    spec:
+      volumes:
+        - name: postgresql-data
+          persistentVolumeClaim:
+            claimName: postgresql-data
+      containers:
+        - env:
+            - name: POSTGRESQL_USER
+              value: "mlflowuser"
+            - name: POSTGRESQL_PASSWORD
+              value: "mlflowpass"
+            - name: POSTGRESQL_DATABASE
+              value: "mlflow"
+          image: "registry.redhat.io/rhel9/postgresql-16:9.6"
+          imagePullPolicy: IfNotPresent
+          name: postgresql
+          ports:
+            - containerPort: 5432
+              protocol: TCP
+          livenessProbe:
+            exec:
+              command:
+                - /usr/libexec/check-container
+                - --live
+            initialDelaySeconds: 120
+            timeoutSeconds: 10
+          readinessProbe:
+            exec:
+              command:
+                - /usr/libexec/check-container
+            initialDelaySeconds: 5
+            timeoutSeconds: 1
+          resources:
+            requests:
+              cpu: "500m"
+              memory: 1Gi
+            limits:
+              cpu: "500m"
+              memory: 1Gi
+          volumeMounts:
+            - name: postgresql-data
+              mountPath: /var/lib/pgsql/data
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: create-database
+  namespace: mlflow
+spec:
+  backoffLimit: 5
+  selector: {}
+  template:
+    spec:
+      containers:
+      - args:
+        - -ec
+        - |-
+          psql postgresql://mlflowuser:mlflowpass@postgresql:5432/mlflow < /etc/config/init.sql
+          sleep 15
+        command:
+        - /bin/bash
+        image: "registry.redhat.io/rhel9/postgresql-16:9.6"
+        imagePullPolicy: IfNotPresent
+        name: create-database
+        volumeMounts:
+        - name: mlflow-cmap
+          mountPath: /etc/config/
+      restartPolicy: OnFailure
+      volumes:
+      - name: mlflow-cmap
+        configMap:
+          name: mlflow-cmap
